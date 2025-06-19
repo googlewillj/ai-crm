@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>{{ customer.full_name }}</h1>
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Customer Details</h5>
+            <p class="card-text"><strong>Full Name:</strong> {{ customer.full_name }}</p>
+            <p class="card-text"><strong>Preferred Name:</strong> {{ customer.preferred_name if customer.preferred_name else 'N/A' }}</p>
+            <p class="card-text"><strong>Email:</strong> {{ customer.email }}</p>
+            <p class="card-text"><strong>Zip Code:</strong> {{ customer.zip_code }}</p>
+            <p class="card-text"><strong>Birth Date:</strong> {{ customer.birth_date.strftime('%Y-%m-%d') }}</p>
+            <p class="card-text"><strong>Member Since:</strong> {{ customer.created_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC</p>
+        </div>
+    </div>
+    <a href="{{ url_for('main.customers') }}" class="btn btn-primary mt-3">Back to Customer List</a>
+{% endblock %}
