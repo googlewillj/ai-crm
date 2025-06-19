@@ -1,0 +1,81 @@
+name: CRM App CI
+
+on:
+  push:
+    branches: [ "main", "develop" ] # Triggers on pushes to main or develop
+  pull_request:
+    branches: [ "main" ] # Triggers on pull requests to main
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:13-alpine
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        # Options for the health check of the postgres service
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies for script execution
+      run: pip install psycopg2-binary Flask SQLAlchemy Flask-Migrate python-dotenv
+
+    - name: Build Docker image
+      run: docker build -t crm-app .
+
+    - name: Run Docker container with tests
+      env:
+        # For the application inside Docker to connect to the PostgreSQL service
+        DATABASE_URL: postgresql://testuser:testpassword@postgres:5432/testdb
+        # For pytest outside docker to potentially connect if needed (though tests run inside)
+        # TEST_DATABASE_URL: postgresql://testuser:testpassword@localhost:5432/testdb # Port is mapped to host
+        FLASK_APP: main.py
+        SECRET_KEY: test-secret-key
+      run: |
+        docker run \
+          --network="host" \
+          -e DATABASE_URL=${DATABASE_URL} \
+          -e FLASK_APP=${FLASK_APP} \
+          -e SECRET_KEY=${SECRET_KEY} \
+          crm-app pytest tests/
+
+    # It's often better to run tests inside the container that will be deployed.
+    # The above `docker run` command executes `pytest tests/` inside the container.
+    # The `boot.sh` script in the container should handle database migrations.
+    # If `boot.sh` is not set up to run migrations and then tests, you might need a different approach
+    # or modify `boot.sh` to accept a command like `pytest`.
+
+    # Example of how to run migrations before tests if not handled by boot.sh + pytest command
+    # - name: Run database migrations (if needed, and not handled by boot.sh during test command)
+    #   env:
+    #     DATABASE_URL: postgresql://testuser:testpassword@localhost:5432/testdb # Connect to service from host
+    #     FLASK_APP: main.py
+    #   run: |
+    #     flask db upgrade
+    #
+    # - name: Run tests (if not run inside docker)
+    #   env:
+    #     DATABASE_URL: postgresql://testuser:testpassword@localhost:5432/testdb
+    #     FLASK_APP: main.py
+    #     SECRET_KEY: ci-secret-key
+    #   run: |
+    #     pip install -r requirements.txt # Ensure test dependencies are installed
+    #     pytest tests/
