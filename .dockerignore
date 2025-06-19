@@ -1,0 +1,13 @@
+.git
+.gitignore
+.dockerignore
+**/__pycache__
+**/*.pyc
+*.egg-info
+venv
+.venv
+.env
+app.db # If you don't want local SQLite DBs in the image
+.pytest_cache
+README.md # If not needed in the image
+# Any other development-specific files/folders
